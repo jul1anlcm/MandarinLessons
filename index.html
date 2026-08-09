@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéMandarin - HSK Trainer App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        zh: ['"Noto Sans SC"', 'sans-serif'],
+                        pixel: ['"Press Start 2P"', 'cursive']
+                    },
+                    colors: {
+                        poke: {
+                            red: '#dc2626',
+                            darkred: '#991b1b',
+                            yellow: '#f59e0b',
+                            lightyellow: '#fef08a',
+                            blue: '#0284c7',
+                            screen: '#f8fafc',
+                            frame: '#e2e8f0'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #0f172a;
+            background-image: radial-gradient(#1e293b 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .zh-text {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        .pokedex-lens {
+            box-shadow: inset -3px -3px 6px rgba(0,0,0,0.4), 0 0 12px rgba(56, 189, 248, 0.8);
+        }
+        .pokedex-screen-border {
+            border: 12px solid #cbd5e1;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.15);
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .recording-pulse {
+            animation: pulse-ring 1.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- Pokédex Style Header -->
+    <header class="bg-red-600 border-b-4 border-red-800 sticky top-0 z-30 shadow-lg text-white">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <!-- Pokédex Camera Sensor Light -->
+                <div class="w-10 h-10 rounded-full bg-cyan-400 border-4 border-white pokedex-lens flex items-center justify-center relative overflow-hidden">
+                    <div class="w-3 h-3 rounded-full bg-white opacity-80 absolute top-1 left-1"></div>
+                </div>
+                <!-- Pokédex Indicator Lights -->
+                <div class="flex space-x-1.5 self-start pt-1">
+                    <div class="w-3 h-3 rounded-full bg-red-400 border border-red-800"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-300 border border-yellow-700 animate-pulse"></div>
+                    <div class="w-3 h-3 rounded-full bg-emerald-400 border border-emerald-800"></div>
+                </div>
+                <div class="ml-2">
+                    <h1 class="font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
+                        <span>PokéMandarin</span>
+                        <select id="hskLevelSelect" onchange="changeHSKLevel(this.value)" class="text-[11px] bg-yellow-400 text-slate-900 px-2 py-0.5 rounded font-black tracking-wider uppercase border-2 border-yellow-500 cursor-pointer hover:bg-yellow-300 transition focus:outline-none">
+                            <option value="3">HSK 3</option>
+                            <option value="4" selected>HSK 4</option>
+                            <option value="5">HSK 5</option>
+                        </select>
+                    </h1>
+                    <p class="text-xs text-red-100 font-medium">Daily Trainer Companion</p>
+                </div>
+            </div>
+
+            <!-- Header Stats & Actions -->
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-1.5 bg-yellow-400 text-slate-900 px-3 py-1.5 rounded-full text-xs font-bold border-2 border-yellow-500 shadow-sm" title="Trainer Badges">
+                    <svg class="w-4 h-4 text-red-600 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2a10 10 0 00-10 10c0 5.18 3.95 9.45 9 9.95v-3.02a4.002 4.002 0 010-7.86V2.05C11.33 2.02 11.66 2 12 2zm1 0c.34 0 .67.02 1 .05v9.88a4.002 4.002 0 010 7.86v3.02c5.05-.5 9-4.77 9-9.95A10 10 0 0013 2zm-1 8a2 2 0 100 4 2 2 0 000-4z"/>
+                    </svg>
+                    <span id="streakCount">1</span> Badges
+                </div>
+                <button onclick="switchTab('settings')" class="p-2 text-white hover:bg-red-700 rounded-xl transition-colors">
+                    <i class="fa-solid fa-gear text-base"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full">
+        <!-- Navigation Tabs -->
+        <nav class="flex space-x-2 border-b-2 border-slate-700 mb-6 pb-2 overflow-x-auto">
+            <button id="tabBtn-daily" onclick="switchTab('daily')" class="tab-btn px-4 py-2 font-bold text-xs sm:text-sm rounded-xl flex items-center space-x-2 text-red-600 bg-white border-2 border-red-500 shadow transition-all">
+                <i class="fa-solid fa-gamepad"></i>
+                <span>Daily Encounter</span>
+            </button>
+            <button id="tabBtn-quiz" onclick="switchTab('quiz')" class="tab-btn px-4 py-2 font-bold text-xs sm:text-sm rounded-xl flex items-center space-x-2 text-slate-300 hover:bg-slate-800 transition-all">
+                <i class="fa-solid fa-khanda"></i>
+                <span>5-Word Battle</span>
+            </button>
+            <button id="tabBtn-vocab" onclick="switchTab('vocab')" class="tab-btn px-4 py-2 font-bold text-xs sm:text-sm rounded-xl flex items-center space-x-2 text-slate-300 hover:bg-slate-800 transition-all">
+                <i class="fa-solid fa-book-journal-whills"></i>
+                <span>Pokédex Vocab</span>
+            </button>
+        </nav>
+
+        <!-- TAB 1: DAILY SENTENCE ENCOUNTER -->
+        <section id="tab-daily" class="tab-content block space-y-6">
+            <div class="bg-slate-100 rounded-3xl p-6 sm:p-8 border-4 border-slate-300 pokedex-screen-border shadow-2xl relative overflow-hidden">
+                <!-- Top Badge Row -->
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+                    <div class="flex items-center space-x-2">
+                        <span id="levelBadge" class="inline-flex items-center px-3 py-1 rounded-md text-xs font-black bg-red-600 text-white uppercase tracking-wider">
+                            <i class="fa-solid fa-bolt mr-1.5 text-yellow-300"></i> Wild HSK 4 Sentence
+                        </span>
+                    </div>
+                    <button onclick="loadRandomSentence()" class="text-xs font-bold text-slate-700 hover:text-red-600 flex items-center space-x-1 bg-white px-3 py-1.5 rounded-lg border-2 border-slate-300 shadow-sm hover:border-red-400 transition active:scale-95">
+                        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                        <span>New Encounter</span>
+                    </button>
+                </div>
+
+                <!-- Interactive Sentence Display -->
+                <div class="my-6 bg-emerald-50/70 p-5 rounded-2xl border-2 border-emerald-200/80 shadow-inner">
+                    <div id="pinyinRow" class="text-emerald-800 font-sans text-base sm:text-lg mb-2 tracking-wide font-bold">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div id="characterRow" class="zh-text text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-relaxed sm:leading-relaxed mb-4 flex flex-wrap gap-x-2 gap-y-3">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div id="translationRow" class="text-base sm:text-lg text-emerald-950 font-semibold italic border-l-4 border-amber-500 pl-4 py-1 mt-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Word Breakdown -->
+                <div class="bg-white rounded-2xl p-4 border-2 border-slate-200 my-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-magnifying-glass text-red-500"></i> Move Breakdown
+                        </span>
+                        <span class="text-[11px] font-bold text-slate-400">Tap words to analyze</span>
+                    </div>
+                    <div id="breakdownChips" class="flex flex-wrap gap-2">
+                        <!-- Chips inserted via JS -->
+                    </div>
+                </div>
+
+                <!-- Audio Controls & Speech Practice -->
+                <div class="pt-4 border-t-2 border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="playAudio(currentSentence.text, 1.0)" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-md border-b-4 border-red-800 flex items-center space-x-2 active:translate-y-0.5 transition-all">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <span>Listen Audio</span>
+                        </button>
+                        <button onclick="playAudio(currentSentence.text, 0.65)" class="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-xl font-bold text-sm border-b-4 border-amber-600 flex items-center space-x-2 active:translate-y-0.5 transition-all">
+                            <i class="fa-solid fa-turtle"></i>
+                            <span>Slow (0.65x)</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button id="micBtn" onclick="toggleSpeechRecognition()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white border-b-4 border-blue-800 rounded-xl font-bold text-sm flex items-center space-x-2 transition shadow">
+                            <i id="micIcon" class="fa-solid fa-microphone"></i>
+                            <span id="micStatusText">Practice Voice Command</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Voice Recording Result Box -->
+                <div id="speechResultBox" class="hidden mt-4 p-4 rounded-xl bg-white border-2 border-slate-300 text-sm shadow-inner">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-800">Rotom Hearing Check:</span>
+                        <span id="speechMatchBadge" class="text-xs px-2.5 py-1 rounded-full font-bold bg-slate-200 text-slate-700">Checking...</span>
+                    </div>
+                    <p id="speechRecognizedText" class="text-slate-900 text-lg font-zh font-bold mb-1">-</p>
+                    <p id="speechFeedbackText" class="text-xs font-semibold text-slate-500"></p>
+                </div>
+            </div>
+
+            <!-- AI Generator Card -->
+            <div class="bg-gradient-to-r from-red-600 via-rose-600 to-amber-500 text-white rounded-2xl p-6 shadow-xl border-2 border-red-700 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-2xl bg-yellow-400 border-2 border-slate-900 text-slate-900 flex items-center justify-center font-black text-2xl shadow">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-base flex items-center space-x-2">
+                            <span>Professor Rotom's AI Generator</span>
+                        </h3>
+                        <p id="aiGenSubtitle" class="text-xs text-red-100 mt-1 font-medium">Generate fresh real-world HSK 4 Mandarin scenarios powered by Gemini AI!</p>
+                    </div>
+                </div>
+                <button onclick="generateAISentence()" id="aiGenBtn" class="whitespace-nowrap px-5 py-3 bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black rounded-xl text-xs transition flex items-center space-x-2 shadow-lg border-b-4 border-yellow-600 active:translate-y-0.5">
+                    <i class="fa-solid fa-bolt text-red-600"></i>
+                    <span>Summon Rotom Sentence</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 2: 5-WORD BATTLE QUIZ -->
+        <section id="tab-quiz" class="tab-content hidden space-y-6">
+            <div id="quizCard" class="bg-slate-100 rounded-3xl p-6 sm:p-8 border-4 border-slate-300 pokedex-screen-border shadow-2xl relative overflow-hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <span id="quizQuestionCount" class="text-xs font-black uppercase tracking-wider text-slate-600 bg-slate-200 px-3 py-1 rounded-md">Turn 1 of 5</span>
+                    <span id="quizScoreText" class="text-xs font-black text-amber-600 bg-amber-100 px-3 py-1 rounded-md border border-amber-300">Score: 0/5</span>
+                </div>
+
+                <div class="w-full bg-slate-300 rounded-full h-2.5 mb-6 overflow-hidden">
+                    <div id="quizProgressBar" class="bg-red-600 h-2.5 rounded-full transition-all duration-300" style="width: 20%"></div>
+                </div>
+
+                <div class="bg-slate-900 text-white p-6 rounded-2xl border-4 border-slate-700 shadow-inner mb-6 text-center">
+                    <p class="text-xs font-bold text-amber-400 uppercase tracking-widest mb-1"><i class="fa-solid fa-khanda mr-1"></i> Target English Meaning</p>
+                    <h2 id="quizEnglishWord" class="text-2xl sm:text-3xl font-black italic text-white my-2">"loading..."</h2>
+                    <p class="text-xs text-slate-400">Select the correct Mandarin Move below:</p>
+                </div>
+
+                <div id="quizOptionsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div id="quizFeedbackArea" class="hidden my-4 p-4 rounded-xl text-center text-sm font-semibold transition-all"></div>
+
+                <div class="mt-6 flex justify-end">
+                    <button id="quizNextBtn" onclick="nextQuizQuestion()" class="hidden px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow-md border-b-4 border-red-800 items-center space-x-2 transition active:translate-y-0.5">
+                        <span>Next Question</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quiz Results Victory Card -->
+            <div id="quizResultsCard" class="hidden bg-slate-100 rounded-3xl p-6 sm:p-8 border-4 border-slate-300 pokedex-screen-border shadow-2xl text-center space-y-6">
+                <div class="w-20 h-20 bg-yellow-400 border-4 border-slate-900 rounded-full flex items-center justify-center text-red-600 text-3xl mx-auto shadow-lg animate-bounce">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-slate-900">Battle Complete!</h3>
+                    <p class="text-xs text-slate-600 mt-1">Here is how you performed in this 5-Word Battle:</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 max-w-xs mx-auto">
+                    <div class="bg-white p-4 rounded-2xl border-2 border-slate-200">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Score</p>
+                        <p id="finalScoreDisplay" class="text-3xl font-black text-red-600">0/5</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border-2 border-slate-200">
+                        <p class="text-xs font-bold text-slate-400 uppercase">Accuracy</p>
+                        <p id="finalAccuracyDisplay" class="text-3xl font-black text-emerald-600">0%</p>
+                    </div>
+                </div>
+
+                <button onclick="startNewQuiz()" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-black text-sm rounded-xl shadow-lg border-b-4 border-red-800 inline-flex items-center space-x-2 transition active:translate-y-0.5">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Start New Battle</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 3: HSK POKÉDEX VOCABULARY -->
+        <section id="tab-vocab" class="tab-content hidden space-y-4">
+            <div class="bg-slate-100 rounded-3xl p-6 border-4 border-slate-300 pokedex-screen-border shadow-2xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h3 class="font-black text-slate-900 text-lg flex items-center gap-2">
+                            <i class="fa-solid fa-book text-red-600"></i> <span id="vocabHeaderTitle">HSK 4 Pokédex Database</span>
+                        </h3>
+                        <p class="text-xs text-slate-600 font-medium">Search and inspect words to listen to standard Mandarin pronunciation.</p>
+                    </div>
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="vocabSearchInput" oninput="filterVocabList()" placeholder="Search Pinyin, Chinese, English..." class="w-full pl-9 pr-3 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-red-500 shadow-sm">
+                    </div>
+                </div>
+
+                <div id="vocabGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[520px] overflow-y-auto pr-1">
+                    <!-- Cards dynamically populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: SETTINGS VIEW -->
+        <section id="tab-settings" class="tab-content hidden space-y-6">
+            <div class="bg-slate-100 rounded-3xl p-6 border-4 border-slate-300 pokedex-screen-border shadow-2xl max-w-xl mx-auto">
+                <h3 class="font-black text-slate-900 text-lg mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-red-600"></i>
+                    <span>Trainer Settings</span>
+                </h3>
+
+                <div class="space-y-4 text-sm bg-white p-5 rounded-2xl border-2 border-slate-200">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div>
+                            <p class="font-bold text-slate-800">Voice Playback Speed</p>
+                            <p class="text-xs text-slate-400">Adjust TTS speech rate for encounters</p>
+                        </div>
+                        <select id="settingSpeechRate" class="bg-slate-50 border-2 border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700">
+                            <option value="0.75">Slow (0.75x)</option>
+                            <option value="0.9" selected>Normal (0.9x)</option>
+                            <option value="1.1">Fast (1.1x)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div>
+                            <p class="font-bold text-slate-800">Show Pinyin by Default</p>
+                            <p class="text-xs text-slate-400">Turn off for advanced character recognition</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="settingShowPinyin" checked onchange="togglePinyinVisibility()" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                        </label>
+                    </div>
+
+                    <div class="bg-amber-50 p-4 rounded-xl border-2 border-amber-200 text-xs text-amber-900 space-y-1">
+                        <p class="font-black flex items-center gap-1.5">
+                            <i class="fa-solid fa-lightbulb text-yellow-500"></i> Trainer Tip for HSK Mandarin:
+                        </p>
+                        <p>Practice reading out loud after listening to standard pronunciation. Tone Sandhi will naturally click as you repeat daily sentences!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-4 mt-8 text-center text-xs text-slate-400">
+        <div class="max-w-4xl mx-auto px-4">
+            <p class="font-medium">PokéMandarin • HSK Daily Speaking & Listening Companion</p>
+        </div>
+    </footer>
+
+    <!-- Word Inspect Modal -->
+    <div id="wordModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-100 rounded-3xl max-w-sm w-full p-6 shadow-2xl border-4 border-slate-300 text-center relative">
+            <button onclick="closeWordModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <span class="text-[10px] uppercase tracking-widest font-black text-white bg-red-600 px-3 py-1 rounded-full border border-red-700">Pokédex Entry</span>
+            <div id="modalChar" class="zh-text text-5xl font-black text-slate-900 mt-4 mb-1">词</div>
+            <div id="modalPinyin" class="text-red-600 font-bold text-lg mb-3">cí</div>
+            <div id="modalEng" class="text-slate-800 text-sm font-semibold border-t-2 border-slate-200 pt-3 bg-white p-3 rounded-xl border">Word; Term</div>
+            <button id="modalAudioBtn" class="mt-4 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-2 mx-auto border-b-4 border-red-800 transition active:translate-y-0.5">
+                <i class="fa-solid fa-volume-high"></i>
+                <span>Play Sound</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let currentHSKLevel = 4;
+
+        // DATASETS: HSK 3, 4, 5
+        const HSK_SENTENCES = {
+            3: [
+                {
+                    text: "他虽然生病了，但是仍然坚持去上班。",
+                    pinyin: "tā suī rán shēng bìng le, dàn shì réng rán jiān chí qù shàng bān.",
+                    english: "Although he was sick, he still insisted on going to work.",
+                    breakdown: [
+                        { char: "虽然", pinyin: "suī rán", eng: "although / even though" },
+                        { char: "生病", pinyin: "shēng bìng", eng: "to fall ill / sick" },
+                        { char: "但是", pinyin: "dàn shì", eng: "but / however" },
+                        { char: "坚持", pinyin: "jiān chí", eng: "to persist / insist" }
+                    ]
+                },
+                {
+                    text: "这里的风景非常漂亮，吸引了很多游客。",
+                    pinyin: "zhè lǐ de fēng jǐng fēi cháng piào liang, xī yǐn le hěn duō yóu kè.",
+                    english: "The scenery here is very beautiful, attracting many tourists.",
+                    breakdown: [
+                        { char: "风景", pinyin: "fēng jǐng", eng: "scenery / landscape" },
+                        { char: "非常", pinyin: "fēi cháng", eng: "very / extremely" },
+                        { char: "吸引", pinyin: "xī yǐn", eng: "to attract / fascinate" },
+                        { char: "游客", pinyin: "yóu kè", eng: "tourist / visitor" }
+                    ]
+                },
+                {
+                    text: "为了提高汉语水平，他每天都练习听力。",
+                    pinyin: "wèi le tí gāo hàn yǔ shuǐ píng, tā měi tiān dōu liàn xí tīng lì.",
+                    english: "In order to improve his Chinese level, he practices listening every day.",
+                    breakdown: [
+                        { char: "为了", pinyin: "wèi le", eng: "in order to / for" },
+                        { char: "提高", pinyin: "tí gāo", eng: "to improve / raise" },
+                        { char: "水平", pinyin: "shuǐ píng", eng: "level / standard" },
+                        { char: "练习", pinyin: "liàn xí", eng: "to practice" }
+                    ]
+                }
+            ],
+            4: [
+                {
+                    text: "不管遇到什么困难，我们都要坚持下去。",
+                    pinyin: "bù guǎn yù dào shén me kùn nan, wǒ men dōu yào jiān chí xià qù.",
+                    english: "No matter what difficulties we encounter, we must keep going.",
+                    breakdown: [
+                        { char: "不管", pinyin: "bù guǎn", eng: "no matter / regardless of" },
+                        { char: "遇到", pinyin: "yù dào", eng: "to encounter / run into" },
+                        { char: "困难", pinyin: "kùn nan", eng: "difficulty / hardship" },
+                        { char: "坚持", pinyin: "jiān chí", eng: "to persist / keep going" }
+                    ]
+                },
+                {
+                    text: "这个方案挺合理的，你可以考虑一下。",
+                    pinyin: "zhè ge fāng àn tǐng hé lǐ de, nǐ kě yǐ kǎo lǜ yī xià.",
+                    english: "This proposal is quite reasonable, you can consider it.",
+                    breakdown: [
+                        { char: "方案", pinyin: "fāng àn", eng: "plan / proposal" },
+                        { char: "挺", pinyin: "tǐng", eng: "quite / rather" },
+                        { char: "合理", pinyin: "hé lǐ", eng: "reasonable / rational" },
+                        { char: "考虑", pinyin: "kǎo lǜ", eng: "to consider / think over" }
+                    ]
+                },
+                {
+                    text: "按照规定，公共场所是禁止吸烟的。",
+                    pinyin: "àn zhào guī dìng, gōng gòng chǎng suǒ shì jìn zhǐ xī yān de.",
+                    english: "According to regulations, smoking is forbidden in public places.",
+                    breakdown: [
+                        { char: "按照", pinyin: "àn zhào", eng: "according to" },
+                        { char: "规定", pinyin: "guī dìng", eng: "regulation / rule" },
+                        { char: "公共场所", pinyin: "gōng gòng chǎng suǒ", eng: "public place" },
+                        { char: "禁止", pinyin: "jìn zhǐ", eng: "to prohibit / forbid" }
+                    ]
+                },
+                {
+                    text: "只要你努力，就一定能取得好成绩。",
+                    pinyin: "zhǐ yào nǐ nǔ lì, jiù yī dìng néng qǔ dé hǎo chéng jì.",
+                    english: "As long as you work hard, you will surely achieve good results.",
+                    breakdown: [
+                        { char: "只要", pinyin: "zhǐ yào", eng: "as long as" },
+                        { char: "努力", pinyin: "nǔ lì", eng: "strive / make effort" },
+                        { char: "取得", pinyin: "qǔ dé", eng: "to acquire / achieve" },
+                        { char: "成绩", pinyin: "chéng jì", eng: "result / grade" }
+                    ]
+                },
+                {
+                    text: "抱歉，由于交通堵塞，我稍微迟到了。",
+                    pinyin: "bào qiàn, yóu yú jiāo tōng dǔ sè, wǒ shāo wēi chí dào le.",
+                    english: "Sorry, due to traffic congestion, I am slightly late.",
+                    breakdown: [
+                        { char: "抱歉", pinyin: "bào qiàn", eng: "sorry / apologetic" },
+                        { char: "由于", pinyin: "yóu yú", eng: "due to / because of" },
+                        { char: "堵塞", pinyin: "dǔ sè", eng: "traffic jam / clog" },
+                        { char: "稍微", pinyin: "shāo wēi", eng: "slightly / a little bit" }
+                    ]
+                }
+            ],
+            5: [
+                {
+                    text: "随着科学技术的发展，人类的生活发生了巨大的变化。",
+                    pinyin: "suí zhe kē xué jì shù de fā zhǎn, rén lèi de shēng huó fā shēng le jù dà de biàn huà.",
+                    english: "With the development of science and technology, human life has undergone tremendous changes.",
+                    breakdown: [
+                        { char: "随着", pinyin: "suí zhe", eng: "along with / in pace with" },
+                        { char: "科学技术", pinyin: "kē xué jì shù", eng: "science and technology" },
+                        { char: "巨大", pinyin: "jù dà", eng: "huge / tremendous" },
+                        { char: "变化", pinyin: "biàn huà", eng: "change / transformation" }
+                    ]
+                },
+                {
+                    text: "无论面对怎样的挑战，我们都要保持积极乐观的心态。",
+                    pinyin: "wú lùn miàn duì zěn yàng de tiāo zhàn, wǒ men dōu yào bǎo chí jī jí lè guān de xīn tài.",
+                    english: "No matter what kind of challenge we face, we must maintain a positive and optimistic attitude.",
+                    breakdown: [
+                        { char: "无论", pinyin: "wú lùn", eng: "regardless of / no matter" },
+                        { char: "挑战", pinyin: "tiāo zhàn", eng: "challenge" },
+                        { char: "保持", pinyin: "bǎo chí", eng: "to maintain / keep" },
+                        { char: "乐观", pinyin: "lè guān", eng: "optimistic / hopeful" }
+                    ]
+                },
+                {
+                    text: "通过这次市场调查，我们对消费者的需求有了更深刻的了解。",
+                    pinyin: "tōng guò zhè cì shì chǎng diào chá, wǒ men duì xiāo fèi zhě de xū qiú yǒu le gèng shēn kè de liǎo jiě.",
+                    english: "Through this market survey, we gained a deeper understanding of consumer needs.",
+                    breakdown: [
+                        { char: "通过", pinyin: "tōng guò", eng: "through / via" },
+                        { char: "消费者", pinyin: "xiāo fèi zhě", eng: "consumer" },
+                        { char: "需求", pinyin: "xū qiú", eng: "demand / requirement" },
+                        { char: "深刻", pinyin: "shēn kè", eng: "profound / deep" }
+                    ]
+                }
+            ]
+        };
+
+        const HSK_VOCAB_BANKS = {
+            3: [
+                { char: "比较", pinyin: "bǐ jiào", eng: "relatively / to compare" },
+                { char: "参加", pinyin: "cān jiā", eng: "to participate / join" },
+                { char: "影响", pinyin: "yǐng xiǎng", eng: "influence / impact" },
+                { char: "了解", pinyin: "liǎo jiě", eng: "to understand / know well" },
+                { char: "决定", pinyin: "jué dìng", eng: "to decide / decision" },
+                { char: "选择", pinyin: "xuǎn zé", eng: "to choose / select" },
+                { char: "照顾", pinyin: "zhào gù", eng: "to look after / care for" },
+                { char: "解决", pinyin: "jiě jué", eng: "to solve / settle" },
+                { char: "简单", pinyin: "jiǎn dān", eng: "simple / uncomplicated" },
+                { char: "历史", pinyin: "lì shǐ", eng: "history" }
+            ],
+            4: [
+                { char: "安排", pinyin: "ān pái", eng: "to arrange / plan" },
+                { char: "抱歉", pinyin: "bào qiàn", eng: "sorry / regretful" },
+                { char: "保证", pinyin: "bǎo zhèng", eng: "to guarantee / ensure" },
+                { char: "标准", pinyin: "biāo zhǔn", eng: "standard / criterion" },
+                { char: "表格", pinyin: "biǎo gé", eng: "form / table / sheet" },
+                { char: "表扬", pinyin: "biǎo yáng", eng: "to praise / commend" },
+                { char: "材料", pinyin: "cái liào", eng: "material / data" },
+                { char: "参观", pinyin: "cān guān", eng: "to visit / look around" },
+                { char: "成功", pinyin: "chéng gōng", eng: "success / to succeed" },
+                { char: "诚实", pinyin: "chéng shí", eng: "honest / truthful" },
+                { char: "成熟", pinyin: "chéng shú", eng: "mature / ripe" },
+                { char: "重新", pinyin: "chóng xīn", eng: "again / anew" },
+                { char: "大概", pinyin: "dà gài", eng: "probably / general idea" },
+                { char: "道歉", pinyin: "dào qiàn", eng: "to apologize" },
+                { char: "调查", pinyin: "diào chá", eng: "investigation / survey" },
+                { char: "发展", pinyin: "fā zhǎn", eng: "to develop / growth" },
+                { char: "法律", pinyin: "fǎ lǜ", eng: "law / legal code" },
+                { char: "翻译", pinyin: "fān yì", eng: "to translate / interpreter" }
+            ],
+            5: [
+                { char: "把握", pinyin: "bǎ wò", eng: "to grasp / hold / certainty" },
+                { char: "本质", pinyin: "běn zhì", eng: "essence / nature" },
+                { char: "采取", pinyin: "cǎi qǔ", eng: "to adopt / take (measures)" },
+                { char: "抽象", pinyin: "chōu xiàng", eng: "abstract" },
+                { char: "措施", pinyin: "cuò shī", eng: "measure / step" },
+                { char: "诞生", pinyin: "dàn shēng", eng: "to be born / emerge" },
+                { char: "独立", pinyin: "dú lì", eng: "independent" },
+                { char: "概念", pinyin: "gài niàn", eng: "concept / idea" },
+                { char: "积极", pinyin: "jī jí", eng: "active / positive" },
+                { char: "建设", pinyin: "jiàn shè", eng: "to build / construct" }
+            ]
+        };
+
+        function getCurrentSentences() {
+            return HSK_SENTENCES[currentHSKLevel] || HSK_SENTENCES[4];
+        }
+
+        function getCurrentVocabBank() {
+            return HSK_VOCAB_BANKS[currentHSKLevel] || HSK_VOCAB_BANKS[4];
+        }
+
+        // Global State
+        let currentSentenceIndex = 0;
+        let currentSentence = getCurrentSentences()[0];
+        let quizQuestions = [];
+        let quizCurrentIndex = 0;
+        let quizScore = 0;
+        let selectedQuizOptionIndex = null;
+        let isRecording = false;
+        let recognition = null;
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSentence(0);
+            initQuiz();
+            renderVocabList(getCurrentVocabBank());
+            initSpeechRecognition();
+        });
+
+        // Level Switcher Logic
+        function changeHSKLevel(newLevel) {
+            currentHSKLevel = parseInt(newLevel);
+
+            const levelBadge = document.getElementById('levelBadge');
+            if (levelBadge) {
+                levelBadge.innerHTML = `<i class="fa-solid fa-bolt mr-1.5 text-yellow-300"></i> Wild HSK ${currentHSKLevel} Sentence`;
+            }
+
+            const aiSub = document.getElementById('aiGenSubtitle');
+            if (aiSub) {
+                aiSub.textContent = `Generate fresh real-world HSK ${currentHSKLevel} Mandarin scenarios powered by Gemini AI!`;
+            }
+
+            const vocabTitle = document.getElementById('vocabHeaderTitle');
+            if (vocabTitle) {
+                vocabTitle.textContent = `HSK ${currentHSKLevel} Pokédex Database`;
+            }
+
+            loadSentence(0);
+            initQuiz();
+            filterVocabList();
+        }
+
+        // Tab Switcher
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.className = "tab-btn px-4 py-2 font-bold text-xs sm:text-sm rounded-xl flex items-center space-x-2 text-slate-300 bg-transparent hover:bg-slate-800 hover:text-white transition-all";
+            });
+
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            if (activeTab) activeTab.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+            if (activeBtn) {
+                activeBtn.className = "tab-btn px-4 py-2 font-bold text-xs sm:text-sm rounded-xl flex items-center space-x-2 text-red-600 bg-white border-2 border-red-500 shadow transition-all";
+            }
+        }
+
+        // Speech Synthesis TTS
+        function playAudio(text, rate = 0.9) {
+            if (!('speechSynthesis' in window)) return;
+
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.rate = rate;
+            
+            const voices = window.speechSynthesis.getVoices();
+            const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('Chinese'));
+            if (zhVoice) utterance.voice = zhVoice;
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Load & Render Sentence
+        function loadSentence(index) {
+            const list = getCurrentSentences();
+            currentSentenceIndex = index % list.length;
+            currentSentence = list[currentSentenceIndex];
+
+            document.getElementById('pinyinRow').textContent = currentSentence.pinyin;
+
+            const charContainer = document.getElementById('characterRow');
+            charContainer.innerHTML = '';
+
+            currentSentence.text.split('').forEach(char => {
+                const span = document.createElement('span');
+                span.textContent = char;
+                span.className = "cursor-pointer hover:text-rose-600 transition-colors";
+                span.onclick = () => {
+                    const match = currentSentence.breakdown.find(b => b.char.includes(char));
+                    if (match) {
+                        openWordModal(match.char, match.pinyin, match.eng);
+                    } else {
+                        openWordModal(char, '', 'Individual Chinese Character');
+                    }
+                };
+                charContainer.appendChild(span);
+            });
+
+            document.getElementById('translationRow').textContent = `"${currentSentence.english}"`;
+
+            const chipsContainer = document.getElementById('breakdownChips');
+            chipsContainer.innerHTML = '';
+            currentSentence.breakdown.forEach(item => {
+                const chip = document.createElement('button');
+                chip.onclick = () => openWordModal(item.char, item.pinyin, item.eng);
+                chip.className = "px-3 py-1.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-lg text-xs flex items-center space-x-2 transition shadow-sm";
+                chip.innerHTML = `
+                    <span class="font-bold text-slate-800 zh-text text-sm">${item.char}</span>
+                    <span class="text-rose-600 font-medium">${item.pinyin}</span>
+                    <span class="text-slate-400">|</span>
+                    <span class="text-slate-600 truncate max-w-[120px]">${item.eng}</span>
+                `;
+                chipsContainer.appendChild(chip);
+            });
+
+            document.getElementById('speechResultBox').classList.add('hidden');
+        }
+
+        function loadRandomSentence() {
+            const list = getCurrentSentences();
+            let nextIndex = Math.floor(Math.random() * list.length);
+            if (list.length > 1 && nextIndex === currentSentenceIndex) {
+                nextIndex = (nextIndex + 1) % list.length;
+            }
+            loadSentence(nextIndex);
+        }
+
+        // AI Dynamic Sentence Generator
+        async function generateAISentence() {
+            const btn = document.getElementById('aiGenBtn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Generating...</span>`;
+
+            const prompt = `Generate 1 realistic daily life sentence in Mandarin Chinese suitable for HSK${currentHSKLevel} level. Return JSON object with keys: text (Chinese characters), pinyin (with tone marks), english (translation), breakdown (array of objects with char, pinyin, eng).`;
+
+            try {
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                text: { type: "STRING" },
+                                pinyin: { type: "STRING" },
+                                english: { type: "STRING" },
+                                breakdown: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            char: { type: "STRING" },
+                                            pinyin: { type: "STRING" },
+                                            eng: { type: "STRING" }
+                                        }
+                                    }
+                                }
+                            },
+                            required: ["text", "pinyin", "english", "breakdown"]
+                        }
+                    }
+                };
+
+                const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    const newSentenceObj = JSON.parse(data.candidates[0].content.parts[0].text);
+                    HSK_SENTENCES[currentHSKLevel].unshift(newSentenceObj);
+                    loadSentence(0);
+                } else {
+                    loadRandomSentence();
+                }
+            } catch (err) {
+                loadRandomSentence();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+
+        // Web Speech API Voice Recognition
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isRecording = true;
+                const micBtn = document.getElementById('micBtn');
+                micBtn.className = "px-4 py-2.5 bg-rose-600 text-white rounded-xl font-medium flex items-center space-x-2 recording-pulse shadow-md";
+                document.getElementById('micStatusText').textContent = "Listening... Speak now";
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                evaluateSpeaking(transcript);
+            };
+
+            recognition.onerror = () => stopRecordingUI();
+            recognition.onend = () => stopRecordingUI();
+        }
+
+        function toggleSpeechRecognition() {
+            if (!recognition) return;
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+
+        function stopRecordingUI() {
+            isRecording = false;
+            const micBtn = document.getElementById('micBtn');
+            micBtn.className = "px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white border-b-4 border-blue-800 rounded-xl font-bold text-sm flex items-center space-x-2 transition shadow";
+            document.getElementById('micStatusText').textContent = "Practice Voice Command";
+        }
+
+        function evaluateSpeaking(spokenText) {
+            const box = document.getElementById('speechResultBox');
+            box.classList.remove('hidden');
+
+            document.getElementById('speechRecognizedText').textContent = spokenText;
+
+            const cleanTarget = currentSentence.text.replace(/[^\u4e00-\u9fa5]/g, '');
+            const cleanSpoken = spokenText.replace(/[^\u4e00-\u9fa5]/g, '');
+
+            let matches = 0;
+            for (let char of cleanSpoken) {
+                if (cleanTarget.includes(char)) matches++;
+            }
+
+            const matchRatio = cleanTarget.length > 0 ? (matches / cleanTarget.length) : 0;
+            const badge = document.getElementById('speechMatchBadge');
+            const feedback = document.getElementById('speechFeedbackText');
+
+            if (matchRatio >= 0.7) {
+                badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-100 text-emerald-800";
+                badge.textContent = "Great Pronunciation!";
+                feedback.textContent = "Your spoken Mandarin closely matches the target sentence!";
+            } else if (matchRatio >= 0.4) {
+                badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-800";
+                badge.textContent = "Good Try!";
+                feedback.textContent = "Understandable, but try listening again and shadow the tones closely.";
+            } else {
+                badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-rose-100 text-rose-800";
+                badge.textContent = "Needs Practice";
+                feedback.textContent = "Try pressing 'Slow' to hear sentence pacing clearly, then try again!";
+            }
+        }
+
+        // QUIZ LOGIC
+        function initQuiz() {
+            quizCurrentIndex = 0;
+            quizScore = 0;
+            quizQuestions = [];
+
+            const activeBank = getCurrentVocabBank();
+            const shuffledVocab = [...activeBank].sort(() => 0.5 - Math.random());
+            const selectedWords = shuffledVocab.slice(0, 5);
+
+            selectedWords.forEach(targetWord => {
+                const distractors = activeBank.filter(w => w.char !== targetWord.char)
+                    .sort(() => 0.5 - Math.random())
+                    .slice(0, 2);
+
+                const options = [targetWord, ...distractors].sort(() => 0.5 - Math.random());
+                const correctIndex = options.findIndex(o => o.char === targetWord.char);
+
+                quizQuestions.push({
+                    target: targetWord,
+                    options: options,
+                    correctIndex: correctIndex
+                });
+            });
+
+            document.getElementById('quizCard').classList.remove('hidden');
+            document.getElementById('quizResultsCard').classList.add('hidden');
+            renderQuizQuestion();
+        }
+
+        function renderQuizQuestion() {
+            const q = quizQuestions[quizCurrentIndex];
+            selectedQuizOptionIndex = null;
+
+            document.getElementById('quizQuestionCount').textContent = `Turn ${quizCurrentIndex + 1} of 5`;
+            document.getElementById('quizScoreText').textContent = `Score: ${quizScore}/5`;
+            document.getElementById('quizProgressBar').style.width = `${((quizCurrentIndex + 1) / 5) * 100}%`;
+
+            document.getElementById('quizEnglishWord').textContent = `"${q.target.eng}"`;
+
+            const container = document.getElementById('quizOptionsContainer');
+            container.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.onclick = () => handleOptionSelect(idx);
+                btn.id = `quizOpt-${idx}`;
+                btn.className = "p-4 bg-white hover:bg-slate-50 border-4 border-slate-300 rounded-2xl flex flex-col items-center justify-center space-y-1 transition text-slate-800 shadow-sm relative group active:translate-y-0.5";
+
+                btn.innerHTML = `
+                    <span class="zh-text text-2xl font-black">${opt.char}</span>
+                    <span class="text-red-600 font-bold text-xs">${opt.pinyin}</span>
+                    <button onclick="event.stopPropagation(); playAudio('${opt.char}', 0.85)" class="mt-2 text-slate-400 hover:text-red-600 text-xs p-1">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                `;
+                container.appendChild(btn);
+            });
+
+            document.getElementById('quizFeedbackArea').className = "hidden my-4 p-4 rounded-2xl text-center font-bold transition-all";
+            document.getElementById('quizNextBtn').classList.add('hidden');
+        }
+
+        function handleOptionSelect(index) {
+            if (selectedQuizOptionIndex !== null) return;
+            selectedQuizOptionIndex = index;
+
+            const q = quizQuestions[quizCurrentIndex];
+            const isCorrect = (index === q.correctIndex);
+
+            const selectedBtn = document.getElementById(`quizOpt-${index}`);
+            const correctBtn = document.getElementById(`quizOpt-${q.correctIndex}`);
+
+            if (isCorrect) {
+                quizScore++;
+                selectedBtn.classList.remove('border-slate-300');
+                selectedBtn.classList.add('border-emerald-500', 'bg-emerald-50');
+                showQuizFeedback(true, `Correct! 🎉 "${q.target.char}" (${q.target.pinyin}) means "${q.target.eng}".`);
+            } else {
+                selectedBtn.classList.remove('border-slate-300');
+                selectedBtn.classList.add('border-rose-500', 'bg-rose-50');
+                correctBtn.classList.remove('border-slate-300');
+                correctBtn.classList.add('border-emerald-500', 'bg-emerald-50');
+                showQuizFeedback(false, `Incorrect. The correct answer is "${q.target.char}" (${q.target.pinyin}).`);
+            }
+
+            playAudio(q.target.char, 0.85);
+
+            const nextBtn = document.getElementById('quizNextBtn');
+            nextBtn.classList.remove('hidden');
+            nextBtn.classList.add('flex');
+            if (quizCurrentIndex === 4) {
+                nextBtn.querySelector('span').textContent = "View Results";
+            } else {
+                nextBtn.querySelector('span').textContent = "Next Question";
+            }
+        }
+
+        function showQuizFeedback(isCorrect, message) {
+            const feedbackArea = document.getElementById('quizFeedbackArea');
+            feedbackArea.classList.remove('hidden');
+            if (isCorrect) {
+                feedbackArea.className = "my-4 p-4 rounded-xl text-center text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200";
+            } else {
+                feedbackArea.className = "my-4 p-4 rounded-xl text-center text-sm font-semibold bg-rose-50 text-rose-800 border border-rose-200";
+            }
+            feedbackArea.textContent = message;
+        }
+
+        function nextQuizQuestion() {
+            if (quizCurrentIndex < 4) {
+                quizCurrentIndex++;
+                renderQuizQuestion();
+            } else {
+                showQuizResults();
+            }
+        }
+
+        function showQuizResults() {
+            document.getElementById('quizCard').classList.add('hidden');
+            document.getElementById('quizNextBtn').classList.add('hidden');
+            document.getElementById('quizFeedbackArea').classList.add('hidden');
+
+            const resultsCard = document.getElementById('quizResultsCard');
+            resultsCard.classList.remove('hidden');
+
+            document.getElementById('finalScoreDisplay').textContent = `${quizScore}/5`;
+            document.getElementById('finalAccuracyDisplay').textContent = `${(quizScore / 5) * 100}%`;
+        }
+
+        function startNewQuiz() {
+            initQuiz();
+        }
+
+        // VOCAB & DICTIONARY
+        function renderVocabList(list) {
+            const grid = document.getElementById('vocabGrid');
+            grid.innerHTML = '';
+
+            list.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "p-3.5 bg-slate-50 hover:bg-rose-50/50 border border-slate-200 hover:border-rose-200 rounded-xl flex items-center justify-between transition cursor-pointer group";
+                card.onclick = () => openWordModal(item.char, item.pinyin, item.eng);
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-800 zh-text text-lg shadow-xs group-hover:border-rose-300">
+                            ${item.char}
+                        </div>
+                        <div>
+                            <p class="font-bold text-xs text-rose-600">${item.pinyin}</p>
+                            <p class="text-xs text-slate-600 font-medium truncate max-w-[150px]">${item.eng}</p>
+                        </div>
+                    </div>
+                    <button onclick="event.stopPropagation(); playAudio('${item.char}', 0.85)" class="p-2 text-slate-400 hover:text-rose-600 rounded-lg transition">
+                        <i class="fa-solid fa-volume-high text-xs"></i>
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterVocabList() {
+            const activeBank = getCurrentVocabBank();
+            const q = document.getElementById('vocabSearchInput').value.toLowerCase();
+            const filtered = activeBank.filter(item => 
+                item.char.includes(q) || 
+                item.pinyin.toLowerCase().includes(q) || 
+                item.eng.toLowerCase().includes(q)
+            );
+            renderVocabList(filtered);
+        }
+
+        // Modal Inspector
+        function openWordModal(char, pinyin, eng) {
+            document.getElementById('modalChar').textContent = char;
+            document.getElementById('modalPinyin').textContent = pinyin || '–';
+            document.getElementById('modalEng').textContent = eng || 'Mandarin Entry';
+
+            const audioBtn = document.getElementById('modalAudioBtn');
+            audioBtn.onclick = () => playAudio(char, 0.8);
+
+            document.getElementById('wordModal').classList.remove('hidden');
+        }
+
+        function closeWordModal() {
+            document.getElementById('wordModal').classList.add('hidden');
+        }
+
+        function togglePinyinVisibility() {
+            const showPinyin = document.getElementById('settingShowPinyin').checked;
+            const pinyinRow = document.getElementById('pinyinRow');
+            if (showPinyin) {
+                pinyinRow.classList.remove('hidden');
+            } else {
+                pinyinRow.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
